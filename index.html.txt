@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simpolo Distribution Services - Content Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #F8FAFC; /* Light Blue-Gray Background */
+            font-family: 'Inter', sans-serif;
+        }
+        /* Color definitions for Statuses */
+        .status-posted { background-color: #D1FAE5; color: #065F46; border-color: #34D399; } /* Green */
+        .status-scheduled { background-color: #FEEBC8; color: #9A3412; border-color: #FCD34D; } /* Amber */
+        .status-editing { background-color: #DBEAFE; color: #1E40AF; border-color: #60A5FA; } /* Blue */
+        .status-scripting { background-color: #F3E8FF; color: #6D28D9; border-color: #A78BFA; } /* Violet */
+        .status-shoot { background-color: #FCE7F6; color: #9D174D; border-color: #F472B6; } /* Pink */
+        .status-default { background-color: #E5E7EB; color: #4B5563; border-color: #9CA3AF; } /* Gray */
+
+        .active-tab {
+            border-color: #3B82F6; /* Blue */
+            color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+        .inactive-tab {
+            border-color: transparent;
+            color: #7D7D7D;
+        }
+        .post-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border-left: 5px solid; /* For status color strip */
+        }
+        .post-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .modal {
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            opacity: 0;
+            visibility: hidden;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            transition: transform 0.3s ease-in-out;
+            transform: scale(0.95);
+        }
+        .modal.is-visible .modal-content {
+            transform: scale(1);
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-[#1E3A8A]">Simpolo Distribution Services</h1>
+            <p class="text-xl text-[#3B82F6] mt-2">Social Media Content Calendar</p>
+        </header>
+
+        <main>
+            <section id="kpi" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-center">
+                    <h3 class="text-sm font-semibold text-gray-500">TOTAL POSTS</h3>
+                    <p id="total-posts" class="text-3xl font-bold text-[#1E3A8A]">0</p>
+                </div>
+                 <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-center">
+                    <h3 class="text-sm font-semibold text-gray-500">KEY EVENTS</h3>
+                    <p class="text-3xl font-bold text-[#1E3A8A]">5</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-center">
+                    <h3 class="text-sm font-semibold text-gray-500">CONTENT FOCUS</h3>
+                    <p class="text-3xl font-bold text-[#1E3A8A]">Tiles & Design</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-center">
+                    <h3 class="text-sm font-semibold text-gray-500">REEL COUNT</h3>
+                    <p id="reel-count" class="text-3xl font-bold text-[#1E3A8A]">0</p>
+                </div>
+            </section>
+
+            <section class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-bold text-center mb-4 text-[#3B82F6]">Content Mix & Production Status</h3>
+                <div class="chart-container relative mx-auto" style="max-width: 800px; height: 300px;">
+                    <canvas id="contentMixChart"></canvas>
+                </div>
+            </section>
+
+            <section id="filters" class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-8">
+                <h3 class="text-lg font-bold text-center mb-4 text-[#3B82F6]">Filter by Month, Type, or Status</h3>
+                <div class="flex flex-wrap justify-center gap-4">
+                     <select id="month-filter" class="filter-btn bg-white border border-gray-300 rounded-md px-4 py-2 text-gray-700">
+                        <option value="all">All Months</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                    </select>
+                    <select id="type-filter" class="filter-btn bg-white border border-gray-300 rounded-md px-4 py-2 text-gray-700">
+                        <option value="all">All Content Types</option>
+                        <option value="Post">Post</option>
+                        <option value="Reel">Reel</option>
+                        <option value="Story">Story</option>
+                    </select>
+                    <select id="status-filter" class="filter-btn bg-white border border-gray-300 rounded-md px-4 py-2 text-gray-700">
+                        <option value="all">All Statuses</option>
+                        <option value="Posted">Posted</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Editing">Editing</option>
+                        <option value="Scripting">Scripting</option>
+                        <option value="Shoot">Shoot</option>
+                    </select>
+                    <button id="reset-filters" class="bg-[#3B82F6] text-white px-4 py-2 rounded-md hover:bg-[#1E3A8A] transition">Reset Filters</button>
+                </div>
+            </section>
+            
+            <section id="calendar-view" class="mt-8">
+                 <div class="border-b border-gray-200 mb-6">
+                    <nav class="-mb-px flex justify-center space-x-4 md:space-x-8" aria-label="Tabs">
+                        <button class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm active-tab" data-tab="september">September</button>
+                        <button class="tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm inactive-tab" data-tab="october">October</button>
+                    </nav>
+                </div>
+
+                <div id="calendar-content">
+                    <!-- Post cards will be injected here -->
+                </div>
+                 <p id="no-results" class="text-center text-gray-500 hidden py-8">No posts match the current filters or month selection.</p>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal" class="fixed inset-0 z-50 overflow-y-auto modal">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div id="modal-content" class="bg-white rounded-lg shadow-xl w-full max-w-2xl modal-content">
+                <div class="p-6">
+                     <div class="flex justify-between items-start">
+                        <div>
+                            <p id="modal-date" class="text-sm text-gray-500"></p>
+                            <h2 id="modal-title" class="text-2xl font-bold mt-1 text-[#1E3A8A]"></h2>
+                        </div>
+                        <button id="close-modal" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                    </div>
+                    <div class="mt-4 space-y-4">
+                        <div class="flex gap-4">
+                            <div class="w-1/2">
+                                <h4 class="font-semibold text-[#3B82F6]">Content Type</h4>
+                                <span id="modal-type" class="inline-block bg-gray-100 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mt-1"></span>
+                            </div>
+                            <div class="w-1/2">
+                                <h4 class="font-semibold text-[#3B82F6]">Status</h4>
+                                <span id="modal-status" class="inline-block rounded-full px-3 py-1 text-sm font-semibold mt-1"></span>
+                            </div>
+                        </div>
+                        <div>
+                           <h4 class="font-semibold text-[#3B82F6]">Content Idea & Description</h4>
+                           <p id="modal-description" class="text-gray-700 mt-1"></p>
+                        </div>
+                         <div>
+                           <h4 class="font-semibold text-[#3B82F6]">Notes / Owner / Details</h4>
+                           <p id="modal-notes" class="text-gray-700 mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const calendarData = [
+                // Simpolo Distribution Services Calendar Data
+                { date: "Sept 29", month: "September", post: 1, type: "Post", title: "Welcome Back / Product Tease", status: "Scripting", owner: "NA", description: "A simple welcome back or teaser post to kick off the new content cycle.", notes: "Focus on sleek tile visuals." },
+                { date: "Sept 30", month: "September", post: 2, type: "Reel", title: "Brand Introduction", status: "Scripting", owner: "NA", description: "A short, dynamic reel introducing the brand's commitment to quality tiles.", notes: "Use smooth transitions and modern architecture shots." },
+                { date: "Oct 1", month: "October", post: 3, type: "Post", title: "Product Highlight: New Series", status: "Scripting", owner: "NA", description: "Post showcasing the launch of a new tile series or key feature.", notes: "High-resolution close-up of the tile texture." },
+                { date: "Oct 2", month: "October", post: 4, type: "Story", title: "Dusshera Greetings", status: "Posted", owner: "The Food Therapy", description: "A festive story celebrating Dusshera, possibly featuring a collaboration or themed decor.", notes: "Use vibrant colors, festive graphics, and tag 'The Food Therapy'. This is a Key Event." },
+                { date: "Oct 3", month: "October", post: 5, type: "Post", title: "Friday Feature (NA)", status: "Scheduled", owner: "NA", description: "Generic lifestyle or interior design inspiration post.", notes: "Use an image of a beautifully tiled space (kitchen/bath)." },
+                { date: "Oct 4", month: "October", post: 6, type: "Reel", title: "Weekend Design Tip (NA)", status: "Scheduled", owner: "NA", description: "Quick tip reel on tile selection or maintenance.", notes: "Fast, actionable advice format." },
+                { date: "Oct 7", month: "October", post: 7, type: "Post", title: "Product Showcase (NA)", status: "Scheduled", owner: "NA", description: "Detailed look at a popular or best-selling tile type.", notes: "Focus on the durability and finish." },
+                { date: "Oct 8", month: "October", post: 8, type: "Post", title: "Tiles: Folk Origin", status: "Scheduled", owner: "content.vichitraco@gmail.com", description: "Educational post about the historical or cultural origin of a specific tile design style.", notes: "Use historical reference photos or illustrations." },
+                { date: "Oct 9", month: "October", post: 9, type: "Reel", title: "Design Trend Focus (NA)", status: "Scheduled", owner: "NA", description: "Reel exploring a current interior design trend involving Simpolo tiles.", notes: "Showcase 3-4 installations following the trend." },
+                { date: "Oct 10", month: "October", post: 10, type: "Reel", title: "Mood board: Traid Tobes", status: "Scheduled", owner: "content.vichitraco@gmail.com", description: "A visual mood board reel pairing 'Traid Tobes' tiles with furniture, lighting, and paint colors.", notes: "Smooth transitions and aspirational home decor." },
+                { date: "Oct 11", month: "October", post: 11, type: "Post", title: "Saturday Spotlight (NA)", status: "Scheduled", owner: "NA", description: "Showcase of a recent installation project.", notes: "'Before and After' style photo or carousel." },
+                { date: "Oct 12", month: "October", post: 12, type: "Reel", title: "Edu content: On how to place tile", status: "Editing", owner: "edits.vichitraco@gmail.com", description: "Detailed, step-by-step educational reel on the correct process for tile placement.", notes: "Clear, close-up shots of the process, keep the tone professional but accessible." },
+                { date: "Oct 14", month: "October", post: 13, type: "Post", title: "Testimonial Tuesday (NA)", status: "Editing", owner: "NA", description: "Post featuring a customer testimonial or review.", notes: "Use a clean quote graphic and a photo of the completed installation." },
+                { date: "Oct 15", month: "October", post: 14, type: "Reel", title: "Mood board: Brick Backdrop", status: "Editing", owner: "NA", description: "A visual mood board reel showcasing the use of brick-style or textured tiles as a backdrop.", notes: "Focus on industrial or rustic chic aesthetic." },
+                { date: "Oct 16", month: "October", post: 15, type: "Post", title: "Throwback Thursday (NA)", status: "Editing", owner: "NA", description: "Post featuring a classic or enduring tile design from the Simpolo collection.", notes: "Focus on the timeless appeal." },
+                { date: "Oct 17", month: "October", post: 16, type: "Reel", title: "Showcase: Texture Tiles", status: "Scripting", owner: "NA", description: "A product showcase reel highlighting the tactile and visual appeal of textured tiles.", notes: "Tiles under lights, close-ups to show depth." },
+                { date: "Oct 18", month: "October", post: 17, type: "Post", title: "Weekend Project Inspiration (NA)", status: "Scripting", owner: "NA", description: "Inspiring photo of a small, achievable tiling project (e.g., a fireplace or backsplash).", notes: "Focus on DIY appeal." },
+                { date: "Oct 20", month: "October", post: 18, type: "Post", title: "Tiles: Itaca Canyon frame", status: "Editing", owner: "NA", description: "Post featuring a high-impact installation of the Itaca Canyon series, framed beautifully.", notes: "A single, stunning photo of the installation." },
+                { date: "Oct 21", month: "October", post: 19, type: "Reel", title: "Quick Design Challenge (NA)", status: "Editing", owner: "NA", description: "Interactive reel (poll/quiz) asking users to choose the best tile for a specific room.", notes: "Use visual options quickly." },
+                { date: "Oct 22", month: "October", post: 20, type: "Reel", title: "Edu content: Right Tile, Wrong place?", status: "Scripting", owner: "NA", description: "Educational content on selecting the right tile based on usage (e.g., floor vs wall, outdoor vs indoor).", notes: "Quick hacks for removing stains, maintaining grout, etc. Hook: Your tiles can look new for years if you clean them this way." },
+                { date: "Oct 23", month: "October", post: 21, type: "Post", title: "Wellness Wednesday (NA)", status: "Scripting", owner: "NA", description: "Post connecting clean, aesthetic tiling with mental well-being and a calm home.", notes: "Use light, airy interior shots." },
+                { date: "Oct 24", month: "October", post: 22, type: "Reel", title: "Mood board: Mosic Moments", status: "Editing", owner: "NA", description: "A visual mood board reel focused on creative uses and designs using mosaic tiles.", notes: "Focus on detailed patterns and artistic application." },
+                { date: "Oct 25", month: "October", post: 23, type: "Post", title: "Project Highlight: Commercial (NA)", status: "Editing", owner: "NA", description: "Showcase a large-scale commercial project (e.g., mall, office lobby) using Simpolo tiles.", notes: "Focus on performance and scale." },
+                { date: "Oct 27", month: "October", post: 24, type: "Reel", title: "Showcase: Printed moroccon tiles", status: "Shoot", owner: "NA", description: "A dynamic reel showcasing the intricate patterns and colors of printed Moroccan-style tiles.", notes: "Focus on lighting and the vibrancy of the colors." },
+                { date: "Oct 28", month: "October", post: 25, type: "Post", title: "Design Q&A (NA)", status: "Shoot", owner: "NA", description: "Post asking followers to submit their toughest tile-related design questions.", notes: "Use a simple question mark graphic." },
+                { date: "Oct 29", month: "October", post: 26, type: "Post", title: "Tap and hold to reveal tile", status: "Editing", owner: "NA", description: "An interactive post designed to be a 'tap and hold' image reveal game.", notes: "Use a blurred image that reveals a stunning tile installation. Example Link: https://www.instagram.com/p/DPV2eNSjIaF/." },
+                { date: "Oct 30", month: "October", post: 27, type: "Reel", title: "Behind the Scenes: Factory/Process (NA)", status: "Editing", owner: "NA", description: "A reel showing a brief, quality-focused look at the tile manufacturing or inspection process.", notes: "Focus on precision and quality control." },
+                { date: "Oct 31", month: "October", post: 28, type: "Reel", title: "Edu Content: The Science Behind Tile Durability", status: "Editing", owner: "content.vichitraco@gmail.com", description: "Educational reel explaining technical specifications like PEI ratings, thickness, and water absorption rates.", notes: "Explain PEI ratings, thickness, water absorption rates, etc. Hook: 'Before you buy — here’s what really makes a tile last.'" },
+
+                // Generic November Events (Retained for completeness)
+                { date: "Nov 1", month: "November", post: "-", type: "Post", title: "Product Feature Post", status: "Scheduled", owner: "NA", description: "A high-impact photo post of a premium tile line.", notes: "Focus on the finish and application in a luxury setting." },
+                { date: "Nov 2", month: "November", post: "-", type: "Reel", title: "DIY Bathroom Redesign", status: "Scripting", owner: "NA", description: "Time-lapse reel of a quick bathroom corner redesign using new tiles.", notes: "Highlight easy installation methods." }
+            ];
+
+            const calendarContent = document.getElementById('calendar-content');
+            const monthFilter = document.getElementById('month-filter');
+            const typeFilter = document.getElementById('type-filter');
+            const statusFilter = document.getElementById('status-filter');
+            const resetFiltersBtn = document.getElementById('reset-filters');
+            const noResults = document.getElementById('no-results');
+            const totalPostsElement = document.getElementById('total-posts');
+            const reelCountElement = document.getElementById('reel-count');
+            
+            const modal = document.getElementById('modal');
+            const closeModalBtn = document.getElementById('close-modal');
+            
+            const tabs = document.querySelectorAll('.tab');
+            let activeTab = 'september';
+
+            // Utility function to get CSS class based on status
+            const getStatusClass = (status) => {
+                switch (status) {
+                    case 'Posted': return 'status-posted border-green-400';
+                    case 'Scheduled': return 'status-scheduled border-amber-400';
+                    case 'Editing': return 'status-editing border-blue-400';
+                    case 'Scripting': return 'status-scripting border-purple-400';
+                    case 'Shoot': return 'status-shoot border-pink-400';
+                    default: return 'status-default border-gray-400';
+                }
+            };
+
+            // Function to filter and render posts
+            const renderCalendar = (posts) => {
+                calendarContent.innerHTML = '';
+                // Filter by the currently active month tab
+                const postsForTab = posts.filter(post => post.month.toLowerCase() === activeTab);
+
+                if (postsForTab.length === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+                
+                const monthContainer = document.createElement('div');
+                monthContainer.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+
+                postsForTab.forEach((post) => {
+                    const statusClass = getStatusClass(post.status);
+                    const card = document.createElement('div');
+                    card.className = `post-card bg-white rounded-lg shadow-md p-4 flex flex-col cursor-pointer ${statusClass}`;
+                    card.style.borderLeftWidth = '5px'; // Ensure the status strip is visible
+                    card.innerHTML = `
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-semibold text-[#3B82F6]">${post.date}</span>
+                                <span class="text-xs font-medium ${post.post === '-' ? 'bg-gray-200' : 'bg-gray-100'} px-2 py-1 rounded-full text-gray-700">${post.post === '-' ? 'Generic' : `Post #${post.post}`}</span>
+                            </div>
+                            <h3 class="font-bold text-md text-[#1E3A8A] leading-snug">${post.title}</h3>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+                             <span class="text-xs text-gray-500">${post.type}</span>
+                             <span class="text-xs font-semibold ${statusClass} rounded-full px-2 py-0.5">${post.status}</span>
+                        </div>
+                    `;
+                    card.addEventListener('click', () => openModal(post));
+                    monthContainer.appendChild(card);
+                });
+                calendarContent.appendChild(monthContainer);
+            };
+
+            const openModal = (post) => {
+                document.getElementById('modal-date').textContent = `${post.date}, ${post.month}`;
+                document.getElementById('modal-title').textContent = post.title;
+                document.getElementById('modal-description').textContent = post.description;
+                document.getElementById('modal-notes').textContent = post.notes + (post.owner !== 'NA' ? ` | Owner/Detail: ${post.owner}` : '');
+                document.getElementById('modal-type').textContent = post.type;
+                
+                const modalStatusElement = document.getElementById('modal-status');
+                modalStatusElement.textContent = post.status;
+                // Apply status class to the modal status badge
+                modalStatusElement.className = `inline-block rounded-full px-3 py-1 text-sm font-semibold mt-1 ${getStatusClass(post.status)}`;
+
+                modal.classList.add('is-visible');
+                document.body.classList.add('overflow-hidden');
+            };
+
+            const closeModal = () => {
+                modal.classList.remove('is-visible');
+                document.body.classList.remove('overflow-hidden');
+            };
+
+            const applyFilters = () => {
+                let filteredData = [...calendarData];
+                const month = monthFilter.value;
+                const type = typeFilter.value;
+                const status = statusFilter.value;
+
+                if (month !== 'all') {
+                    filteredData = filteredData.filter(p => p.month === month);
+                }
+                if (type !== 'all') {
+                    filteredData = filteredData.filter(p => p.type === type);
+                }
+                if (status !== 'all') {
+                    filteredData = filteredData.filter(p => p.status === status);
+                }
+
+                renderCalendar(filteredData);
+            };
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => {
+                        t.classList.remove('active-tab');
+                        t.classList.add('inactive-tab');
+                    });
+                    tab.classList.add('active-tab');
+                    tab.classList.remove('inactive-tab');
+                    activeTab = tab.dataset.tab;
+                    applyFilters();
+                });
+            });
+
+            monthFilter.addEventListener('change', applyFilters);
+            typeFilter.addEventListener('change', applyFilters);
+            statusFilter.addEventListener('change', applyFilters);
+
+            resetFiltersBtn.addEventListener('click', () => {
+                monthFilter.value = 'all';
+                typeFilter.value = 'all';
+                statusFilter.value = 'all';
+                
+                // Reset tab to September
+                tabs.forEach(t => {
+                    t.classList.remove('active-tab');
+                    t.classList.add('inactive-tab');
+                });
+                const septemberTab = document.querySelector('[data-tab="september"]');
+                septemberTab.classList.add('active-tab');
+                septemberTab.classList.remove('inactive-tab');
+                activeTab = 'september';
+
+                applyFilters();
+            });
+
+            closeModalBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            const setupChart = () => {
+                const ctx = document.getElementById('contentMixChart').getContext('2d');
+                // Filter out non-numbered generic posts for main metrics
+                const productionPosts = calendarData.filter(p => p.post !== '-');
+
+                // 1. Content Type Counts
+                const typeCounts = productionPosts.reduce((acc, post) => {
+                    acc[post.type] = (acc[post.type] || 0) + 1;
+                    return acc;
+                }, {});
+
+                // 2. Status Counts for Pie Chart
+                const statusCounts = productionPosts.reduce((acc, post) => {
+                    acc[post.status] = (acc[post.status] || 0) + 1;
+                    return acc;
+                }, {});
+                
+                // Color mapping for statuses
+                const statusColors = {
+                    'Posted': '#34D399',
+                    'Scheduled': '#FCD34D',
+                    'Editing': '#60A5FA',
+                    'Scripting': '#A78BFA',
+                    'Shoot': '#F472B6',
+                    'Default': '#9CA3AF'
+                };
+                
+                // Prepare data for Chart.js
+                const chartLabels = Object.keys(statusCounts);
+                const chartData = Object.values(statusCounts);
+                const chartBackgroundColors = chartLabels.map(label => statusColors[label] || statusColors['Default']);
+
+
+                // Update KPIs
+                totalPostsElement.textContent = productionPosts.length;
+                reelCountElement.textContent = typeCounts['Reel'] || 0;
+
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Post Status Distribution',
+                            data: chartData,
+                            backgroundColor: chartBackgroundColors,
+                            hoverOffset: 4,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                align: 'center',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 20,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1E3A8A',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                cornerRadius: 4,
+                            }
+                        }
+                    }
+                });
+            };
+
+            applyFilters();
+            setupChart();
+        });
+    </script>
+</body>
+</html>
